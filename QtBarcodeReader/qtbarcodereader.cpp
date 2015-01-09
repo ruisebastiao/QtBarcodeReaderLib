@@ -1,259 +1,72 @@
 #include "qtbarcodereader.h"
-#include <QCameraInfo>
-
-#include <QMediaService>
-#include <QMediaRecorder>
-#include <QCameraViewfinder>
-#include <QCameraInfo>
-#include <QMediaMetaData>
+#include <opencv2/objdetect/objdetect.hpp>
 
 
-Q_DECLARE_METATYPE(QCameraInfo)
+Q_DECLARE_METATYPE(cv::Mat)
 
-QtBarcodeReader::QtBarcodeReader(QObject *parent) :
-    QObject(parent),
-    camera(0),
-    imageCapture(0),
-    isCapturingImage(false)
+
+//QImage QtBarcodeReader::putImage(const Mat& mat)
+//{
+//    // 8-bits unsigned, NO. OF CHANNELS=1
+//    if(mat.type()==CV_8UC1)
+//    {
+//        // Set the color table (used to translate colour indexes to qRgb values)
+//        QVector<QRgb> colorTable;
+//        for (int i=0; i<256; i++)
+//            colorTable.push_back(qRgb(i,i,i));
+//        // Copy input Mat
+//        const uchar *qImageBuffer = (const uchar*)mat.data;
+//        // Create QImage with same dimensions as input Mat
+//        QImage img(qImageBuffer, mat.cols, mat.rows, mat.step, QImage::Format_Indexed8);
+//        img.setColorTable(colorTable);
+//        return img;
+//    }
+//    // 8-bits unsigned, NO. OF CHANNELS=3
+//    if(mat.type()==CV_8UC3)
+//    {
+//        // Copy input Mat
+//        const uchar *qImageBuffer = (const uchar*)mat.data;
+//        // Create QImage with same dimensions as input Mat
+//        QImage img(qImageBuffer, mat.cols, mat.rows, mat.step, QImage::Format_RGB888);
+//        return img.rgbSwapped();
+//    }
+//    else
+//    {
+//        qDebug() << "ERROR: Mat could not be converted to QImage.";
+//        return QImage();
+//    }
+//}
+
+//cap.set(CV_CAP_PROP_FRAME_WIDTH,640);
+//cap.set(CV_CAP_PROP_FRAME_HEIGHT,480);
+
+QtBarcodeReader::QtBarcodeReader(QObject *parent,QWidget *viewer) :
+    QObject(parent)
 {
-    BarcodeDecoder= new QBarcodeDecoder(this);
- setCamera(QCameraInfo::defaultCamera());
+    qRegisterMetaType<cv::Mat>("cv::Mat");
+    converter.setProcessAll(false);
+    captureThread.start();
+    converterThread.start();
+    capture.moveToThread(&captureThread);
+    converter.moveToThread(&converterThread);
+    converter.connect(&capture, SIGNAL(matReady(cv::Mat)), SLOT(processFrame(cv::Mat)));
+    BarcodeDecoder.connect(&converter, SIGNAL(imageReady(QImage)), SLOT(decodeImage(QImage)));
+    if (viewer!=0) {
+        viewer->connect(&converter, SIGNAL(imageReady(QImage)), SLOT(setImage(QImage)));
+    }
 
+
+    QMetaObject::invokeMethod(&capture, "start");
 }
 
 
 
 QtBarcodeReader::~QtBarcodeReader()
 {
-    delete BarcodeDecoder;
-    delete imageCapture;
-    delete camera;
-}
-
-void QtBarcodeReader::configureImageSettings()
-{
-
-    imageSettings=imageCapture->encodingSettings();
-    imageSettings.setCodec("image/bmp");
-    imageSettings.setResolution(640,480);
-    imageSettings.setQuality(QMultimedia::HighQuality);
-
-    //QSize res=imageSettings.resolution();
-    //QCameraImageCapture::se
-    imageCapture->setEncodingSettings(imageSettings);
-
-    imageSettings=imageCapture->encodingSettings();
-    qDebug() << imageSettings.resolution();
-    //imageCapture->set
-
-}
-
-
-
-void QtBarcodeReader::setCamera(const QCameraInfo &cameraInfo)
-{
-    delete imageCapture;
-
-    delete camera;
-
-    camera = new QCamera(cameraInfo);
-
-    connect(camera, SIGNAL(stateChanged(QCamera::State)), this, SLOT(updateCameraState(QCamera::State)));
-    connect(camera, SIGNAL(error(QCamera::Error)), this, SLOT(displayCameraError()));
-
-   viewFinder = new QCameraViewfinder();
-    //viewFinder->set
-    camera->setViewfinder(viewFinder);
-
-    imageCapture = new QCameraImageCapture(camera);
-
-
-    updateCameraState(camera->state());
-
-
-    connect(imageCapture, SIGNAL(readyForCaptureChanged(bool)), this, SLOT(readyForCapture(bool)));
-    connect(imageCapture, SIGNAL(imageCaptured(int,QImage)), this, SLOT(processCapturedImage(int,QImage)));
-    connect(imageCapture, SIGNAL(imageSaved(int,QString)), this, SLOT(imageSaved(int,QString)));
-    connect(imageCapture, SIGNAL(error(int,QCameraImageCapture::Error,QString)), this,
-            SLOT(displayCaptureError(int,QCameraImageCapture::Error,QString)));
-
-//    connect(camera, SIGNAL(lockStatusChanged(QCamera::LockStatus,QCamera::LockChangeReason)),
-//            this, SLOT(updateLockStatus(QCamera::LockStatus,QCamera::LockChangeReason)));
-
-    //ui->captureWidget->setTabEnabled(0, (camera->isCaptureModeSupported(QCamera::CaptureStillImage)));
-    //ui->captureWidget->setTabEnabled(1, (camera->isCaptureModeSupported(QCamera::CaptureVideo)));
-
-    updateCaptureMode();
-    configureImageSettings();
-
-    viewFinder->show();
-    camera->start();
-}
-
-void QtBarcodeReader::imageSaved(int id, const QString &fileName)
-{
-    Q_UNUSED(id);
-    Q_UNUSED(fileName);
-
-    isCapturingImage = false;
-
-}
-
-void QtBarcodeReader::getImage(){
-    takeImage();
-}
-
-void QtBarcodeReader::processCapturedImage(int requestId, const QImage& img)
-{
-    Q_UNUSED(requestId);
-
-//QTimer::singleShot(4000, this, SLOT(displayViewfinder()));
-    BarcodeDecoder->decodeImage(img);
-//    QImage scaledImage = img.scaled(ui->viewfinder->size(),
-//                                    Qt::KeepAspectRatio,
-//                                    Qt::SmoothTransformation);
-
-//    ui->lastImagePreviewLabel->setPixmap(QPixmap::fromImage(scaledImage));
-
-//    // Display captured image for 4 seconds.
-//    displayCapturedImage();
-//    QTimer::singleShot(4000, this, SLOT(displayViewfinder()));
-}
-
-void QtBarcodeReader::configureCaptureSettings()
-{
-//    switch (camera->captureMode()) {
-//    case QCamera::CaptureStillImage:
-//        configureImageSettings();
-//        break;
-//    case QCamera::CaptureVideo:
-//        configureVideoSettings();
-//        break;
-//    default:
-//        break;
-//    }
-}
-
-
-
-void QtBarcodeReader::toggleLock()
-{
-    switch (camera->lockStatus()) {
-    case QCamera::Searching:
-    case QCamera::Locked:
-        camera->unlock();
-        break;
-    case QCamera::Unlocked:
-        camera->searchAndLock();
-    }
-}
-
-//void QtBarcodeReader::updateLockStatus(QCamera::LockStatus status, QCamera::LockChangeReason reason)
-//{
-//    QColor indicationColor = Qt::black;
-
-//    switch (status) {
-//    case QCamera::Searching:
-//        indicationColor = Qt::yellow;
-//        ui->statusbar->showMessage(tr("Focusing..."));
-//        ui->lockButton->setText(tr("Focusing..."));
-//        break;
-//    case QCamera::Locked:
-//        indicationColor = Qt::darkGreen;
-//        ui->lockButton->setText(tr("Unlock"));
-//        ui->statusbar->showMessage(tr("Focused"), 2000);
-//        break;
-//    case QCamera::Unlocked:
-//        indicationColor = reason == QCamera::LockFailed ? Qt::red : Qt::black;
-//        ui->lockButton->setText(tr("Focus"));
-//        if (reason == QCamera::LockFailed)
-//            ui->statusbar->showMessage(tr("Focus Failed"), 2000);
-//    }
-
-//    QPalette palette = ui->lockButton->palette();
-//    palette.setColor(QPalette::ButtonText, indicationColor);
-//    ui->lockButton->setPalette(palette);
-//}
-
-void QtBarcodeReader::takeImage()
-{
-    isCapturingImage = true;
-   // if (imageCapture->isReadyForCapture()) {
-        imageCapture->capture("e:\\img.bmp");
-
-   // }
-
-}
-
-void QtBarcodeReader::displayCaptureError(int id, const QCameraImageCapture::Error error, const QString &errorString)
-{
-    Q_UNUSED(id);
-    Q_UNUSED(error);
-    //QMessageBox::warning(this, tr("Image Capture Error"), errorString);
-    isCapturingImage = false;
-}
-
-void QtBarcodeReader::startCamera()
-{
-    camera->start();
-}
-
-void QtBarcodeReader::stopCamera()
-{
-    camera->stop();
-}
-
-void QtBarcodeReader::updateCaptureMode()
-{
-//    int tabIndex = ui->captureWidget->currentIndex();
-    QCamera::CaptureModes captureMode = QCamera::CaptureStillImage;
-
-    if (camera->isCaptureModeSupported(captureMode))
-        camera->setCaptureMode(captureMode);
-}
-
-void QtBarcodeReader::updateCameraState(QCamera::State state)
-{
-//    switch (state) {
-//    case QCamera::ActiveState:
-//        ui->actionStartCamera->setEnabled(false);
-//        ui->actionStopCamera->setEnabled(true);
-//        ui->captureWidget->setEnabled(true);
-//        ui->actionSettings->setEnabled(true);
-//        break;
-//    case QCamera::UnloadedState:
-//    case QCamera::LoadedState:
-//        ui->actionStartCamera->setEnabled(true);
-//        ui->actionStopCamera->setEnabled(false);
-//        ui->captureWidget->setEnabled(false);
-//        ui->actionSettings->setEnabled(false);
-//    }
-}
-
-
-//void QtBarcodeReader::setExposureCompensation(int index)
-//{
-//    camera->exposure()->setExposureCompensation(index*0.5);
-//}
-
-
-void QtBarcodeReader::displayCameraError()
-{
-  //  QMessageBox::warning(this, tr("Camera error"), camera->errorString());
-    if (true) {
-
-    }
-}
-
-void QtBarcodeReader::updateCameraDevice(QAction *action)
-{
-  //  setCamera(qvariant_cast<QCameraInfo>(action->data()));
-}
-
-
-void QtBarcodeReader::readyForCapture(bool ready)
-{
-    //ui->takeImageButton->setEnabled(ready);
+    captureThread.quit();
+    converterThread.quit();
+    captureThread.wait();
+    converterThread.wait();
 }
 
 

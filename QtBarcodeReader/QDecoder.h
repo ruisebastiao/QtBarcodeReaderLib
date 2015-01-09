@@ -47,6 +47,10 @@ public slots:
     void decodeImage(QImage originalImage);
     void reportTagFound(QString tag);
 
+ signals:
+    void BarcodeFound(QString tag);
+
+
 private:
 
     QZXing decoder;

@@ -37,12 +37,14 @@
 #include <QMessageBox>
 #include <QDebug>
 
+#include <zxing/Exception.h>
+
 QBarcodeDecoder::QBarcodeDecoder(QObject *parent):decoder()
 {
     decoder.setDecoder(QZXing::DecoderFormat_DATA_MATRIX);
     //connect(ui.centralwidget, SIGNAL(imageCaptured(QImage)), this, SLOT(decodeImage(QImage)));
     connect(&decoder, SIGNAL(tagFound(QString)), this, SLOT(reportTagFound(QString)));
-	
+    //decoder.
 	//by default all decoders available are enabled
     //decoder.setDecoder( QZXing::DecoderFormat_DATA_MATRIX);
     //decoder.setDecoder( QZXing::DecoderFormat_Aztec );
@@ -54,15 +56,18 @@ QBarcodeDecoder::~QBarcodeDecoder()
 
 void QBarcodeDecoder::decodeImage(QImage originalImage)
 {
-    qDebug() << "Start of decoding";
+
+
 
     decoder.decodeImage(originalImage,-1,-1, true);
-    qDebug() << "End of decoding";
+
 
 }
 
 void QBarcodeDecoder::reportTagFound(QString tag)
 {
+
+     emit BarcodeFound(tag);
     qDebug()<< "Decoding result : "<<tag;
     //QMessageBox::information(0, QString("Decoding result") ,tag);
 }

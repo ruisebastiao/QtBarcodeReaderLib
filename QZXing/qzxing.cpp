@@ -9,6 +9,8 @@
 #include "imagehandler.h"
 #include <QTime>
 
+
+
 using namespace zxing;
 
 QZXing::QZXing(QObject *parent) : QObject(parent)
@@ -126,7 +128,8 @@ QString QZXing::decodeImage(QImage image, int maxWidth, int maxHeight, bool smoo
         Ref<BinaryBitmap> ref(bb);
 
         res = ((MultiFormatReader*)decoder)->decode(ref, DecodeHints((int)enabledDecoders));
-
+        ResultPoint ress;
+        //ress.
         QString string = QString(res->getText()->getText().c_str());
         processingTime = t.elapsed();
         emit tagFound(string);

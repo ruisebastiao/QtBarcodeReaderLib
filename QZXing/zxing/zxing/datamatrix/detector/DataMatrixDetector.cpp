@@ -83,6 +83,8 @@ Ref<BitMatrix> Detector::getImage() {
 Ref<DetectorResult> Detector::detect() {
   Ref<WhiteRectangleDetector> rectangleDetector_(new WhiteRectangleDetector(image_));
   std::vector<Ref<ResultPoint> > ResultPoints = rectangleDetector_->detect();
+
+
   Ref<ResultPoint> pointA = ResultPoints[0];
   Ref<ResultPoint> pointB = ResultPoints[1];
   Ref<ResultPoint> pointC = ResultPoints[2];
