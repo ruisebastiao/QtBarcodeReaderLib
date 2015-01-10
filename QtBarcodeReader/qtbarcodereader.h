@@ -5,7 +5,7 @@
 #include <QPixmap>
 #include <qzxing.h>
 #include <QDecoder.h>
-#include <capture.h>
+#include <CVcapture.h>
 #include <converter.h>
 #include <QWidget>
 #include <QDecoder.h>
@@ -19,8 +19,12 @@ public:
     ~QtBarcodeReader();
 
 
+
+public slots:
+    void StartCapture();
+    void StopCapture();
 private:
-    Capture capture;
+    CVCapture *cvcapture;
       Converter converter;
       QThread captureThread, converterThread;
 protected:

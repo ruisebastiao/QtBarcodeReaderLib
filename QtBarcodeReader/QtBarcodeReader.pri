@@ -10,16 +10,16 @@ DEFINES += QTBARCODEREADER_LIBRARY
 
 SOURCES += $$PWD/qtbarcodereader.cpp \
            $$PWD/QDecoder.cpp \
-    $$PWD/capture.cpp \
     $$PWD/converter.cpp \
-    $$PWD/cameraimageviewer.cpp
+    $$PWD/cameraimageviewer.cpp \
+    $$PWD/CVcapture.cpp
 
 HEADERS += $$PWD/qtbarcodereader.h\
         $$PWD/QDecoder.h \
         $$PWD/qtbarcodereader_global.h \
-    $$PWD/capture.h \
     $$PWD/converter.h \
-    $$PWD/cameraimageviewer.h
+    $$PWD/cameraimageviewer.h \
+    $$PWD/CVcapture.h
 
 INCLUDEPATH  += $$PWD
 

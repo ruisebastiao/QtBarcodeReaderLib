@@ -12,13 +12,13 @@ using namespace cv;
 
 
 
-class QTBARCODEREADERSHARED_EXPORT Capture : public QObject
+class QTBARCODEREADERSHARED_EXPORT CVCapture : public QObject
 {
     Q_OBJECT
     static void matDeleter(void* mat) { delete static_cast<cv::Mat*>(mat); }
 public:
-    explicit Capture(QObject *parent = 0);
-    ~Capture();
+    explicit CVCapture(QObject *parent = 0);
+    ~CVCapture();
 
 
 private:

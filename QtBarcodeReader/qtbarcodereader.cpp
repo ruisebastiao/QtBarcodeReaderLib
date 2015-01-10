@@ -5,68 +5,45 @@
 Q_DECLARE_METATYPE(cv::Mat)
 
 
-//QImage QtBarcodeReader::putImage(const Mat& mat)
-//{
-//    // 8-bits unsigned, NO. OF CHANNELS=1
-//    if(mat.type()==CV_8UC1)
-//    {
-//        // Set the color table (used to translate colour indexes to qRgb values)
-//        QVector<QRgb> colorTable;
-//        for (int i=0; i<256; i++)
-//            colorTable.push_back(qRgb(i,i,i));
-//        // Copy input Mat
-//        const uchar *qImageBuffer = (const uchar*)mat.data;
-//        // Create QImage with same dimensions as input Mat
-//        QImage img(qImageBuffer, mat.cols, mat.rows, mat.step, QImage::Format_Indexed8);
-//        img.setColorTable(colorTable);
-//        return img;
-//    }
-//    // 8-bits unsigned, NO. OF CHANNELS=3
-//    if(mat.type()==CV_8UC3)
-//    {
-//        // Copy input Mat
-//        const uchar *qImageBuffer = (const uchar*)mat.data;
-//        // Create QImage with same dimensions as input Mat
-//        QImage img(qImageBuffer, mat.cols, mat.rows, mat.step, QImage::Format_RGB888);
-//        return img.rgbSwapped();
-//    }
-//    else
-//    {
-//        qDebug() << "ERROR: Mat could not be converted to QImage.";
-//        return QImage();
-//    }
-//}
-
-//cap.set(CV_CAP_PROP_FRAME_WIDTH,640);
-//cap.set(CV_CAP_PROP_FRAME_HEIGHT,480);
-
 QtBarcodeReader::QtBarcodeReader(QObject *parent,QWidget *viewer) :
     QObject(parent)
 {
     qRegisterMetaType<cv::Mat>("cv::Mat");
-    converter.setProcessAll(false);
-    captureThread.start();
-    converterThread.start();
-    capture.moveToThread(&captureThread);
-    converter.moveToThread(&converterThread);
-    converter.connect(&capture, SIGNAL(matReady(cv::Mat)), SLOT(processFrame(cv::Mat)));
+    converter.setProcessAll(false);    
+    cvcapture= new CVCapture();
+    converter.connect(cvcapture, SIGNAL(matReady(cv::Mat)), SLOT(processFrame(cv::Mat)));
     BarcodeDecoder.connect(&converter, SIGNAL(imageReady(QImage)), SLOT(decodeImage(QImage)));
     if (viewer!=0) {
         viewer->connect(&converter, SIGNAL(imageReady(QImage)), SLOT(setImage(QImage)));
     }
 
 
-    QMetaObject::invokeMethod(&capture, "start");
+
 }
 
 
 
 QtBarcodeReader::~QtBarcodeReader()
 {
+
+    StopCapture();
+
+    delete cvcapture;
+}
+
+
+void QtBarcodeReader::StartCapture(){
+    captureThread.start();
+    converterThread.start();
+    cvcapture->moveToThread(&captureThread);
+    converter.moveToThread(&converterThread);
+    QMetaObject::invokeMethod(cvcapture, "start");
+}
+
+
+void QtBarcodeReader::StopCapture(){
     captureThread.quit();
     converterThread.quit();
     captureThread.wait();
     converterThread.wait();
 }
-
-
