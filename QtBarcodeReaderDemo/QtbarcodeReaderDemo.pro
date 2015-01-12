@@ -12,16 +12,16 @@ TARGET = QtbarcodeReaderDemo
 TEMPLATE = app
 
 
-
+include(../QtBarcodeReader/QtBarcodeReader.pri)
 unix {
     LIBS += -L$$PWD/F:/OpenCV/VS2013/install/x86/vc12/bin/ -lopencv_core300
     target.path = /usr/lib
     INSTALLS += target
-    include($HOME/Github/QtBarcodeReaderLib/QtBarcodeReader/QtBarcodeReader.pri)
+
 }
 
 win32-msvc*{
-include(C:/Users/automacao/Documents/GitHub/QtBarcodeReaderLib/QtBarcodeReader/QtBarcodeReader.pri)
+
 
 }
 
