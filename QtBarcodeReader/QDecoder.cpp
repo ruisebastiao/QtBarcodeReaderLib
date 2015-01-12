@@ -41,9 +41,10 @@
 
 QBarcodeDecoder::QBarcodeDecoder(QObject *parent):decoder()
 {
-    decoder.setDecoder(QZXing::DecoderFormat_DATA_MATRIX);
+    decoder.setDecoder(QZXing::DecoderFormat_CODE_39);
     //connect(ui.centralwidget, SIGNAL(imageCaptured(QImage)), this, SLOT(decodeImage(QImage)));
     connect(&decoder, SIGNAL(tagFound(QString)), this, SLOT(reportTagFound(QString)));
+    connect(&decoder, SIGNAL(decodingFinished(bool)), this, SLOT(decodingFinished(bool)));
     //decoder.
 	//by default all decoders available are enabled
     //decoder.setDecoder( QZXing::DecoderFormat_DATA_MATRIX);
@@ -64,10 +65,21 @@ void QBarcodeDecoder::decodeImage(QImage originalImage)
 
 }
 
+
+void QBarcodeDecoder::decodingFinished(bool Status)
+{
+
+
+    emit BarcodeDecodeStatus(BARCODESTATUS::NOREAD,"NO READ");
+
+
+
+}
+
 void QBarcodeDecoder::reportTagFound(QString tag)
 {
 
-     emit BarcodeFound(tag);
-    qDebug()<< "Decoding result : "<<tag;
-    //QMessageBox::information(0, QString("Decoding result") ,tag);
+     emit BarcodeDecodeStatus(BARCODESTATUS::BARCODEREADED,tag);
+
+
 }

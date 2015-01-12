@@ -35,6 +35,8 @@
 #include <qzxing.h>
 #include "qtbarcodereader_global.h"
 
+
+
 class QTBARCODEREADERSHARED_EXPORT QBarcodeDecoder : public QObject
 {
     Q_OBJECT
@@ -42,15 +44,19 @@ class QTBARCODEREADERSHARED_EXPORT QBarcodeDecoder : public QObject
 public:
     QBarcodeDecoder(QObject *parent = 0);
     ~QBarcodeDecoder();
-    
+
+
 public slots:
     void decodeImage(QImage originalImage);
     void reportTagFound(QString tag);
 
  signals:
-    void BarcodeFound(QString tag);
+    void BarcodeDecodeStatus(BARCODESTATUS Status,QString Barcode);
 
 
+
+private slots:
+    void decodingFinished(bool Status);
 private:
 
     QZXing decoder;

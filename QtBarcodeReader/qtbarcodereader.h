@@ -32,6 +32,10 @@ protected:
 
 private slots:
 
+
+    void NewBarcodeDecodeStatus(BARCODESTATUS Status,QString Barcode);
+signals:
+    void BarcodeDecodeStatus(BARCODESTATUS Status,QString Barcode);
 };
 
 #endif // QTBARCODEREADER_H

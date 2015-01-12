@@ -13,6 +13,8 @@ QtBarcodeReader::QtBarcodeReader(QObject *parent,QWidget *viewer) :
     cvcapture= new CVCapture();
     converter.connect(cvcapture, SIGNAL(matReady(cv::Mat)), SLOT(processFrame(cv::Mat)));
     BarcodeDecoder.connect(&converter, SIGNAL(imageReady(QImage)), SLOT(decodeImage(QImage)));
+    connect(&BarcodeDecoder,SIGNAL(BarcodeDecodeStatus(BARCODESTATUS,QString)),this, SLOT(NewBarcodeDecodeStatus(BARCODESTATUS,QString)));
+
     if (viewer!=0) {
         viewer->connect(&converter, SIGNAL(imageReady(QImage)), SLOT(setImage(QImage)));
     }
@@ -21,7 +23,9 @@ QtBarcodeReader::QtBarcodeReader(QObject *parent,QWidget *viewer) :
 
 }
 
-
+void QtBarcodeReader::NewBarcodeDecodeStatus(BARCODESTATUS Status, QString Barcode){
+    emit BarcodeDecodeStatus(Status,Barcode);
+}
 
 QtBarcodeReader::~QtBarcodeReader()
 {
